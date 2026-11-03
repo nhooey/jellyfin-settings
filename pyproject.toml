@@ -1,0 +1,23 @@
+[project]
+name = "jellyfin-settings"
+version = "0.1.0"
+description = "Declare Jellyfin's settings and apply them through its REST API"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = ["httpx", "toolz", "typer"]
+
+[project.scripts]
+jellyfin-settings = "jellyfin_settings.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

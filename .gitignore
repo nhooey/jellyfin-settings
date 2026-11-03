@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+# Nix: build outputs, and the dev shell's state.
+result
+result-*
+.direnv/
+
+# Project-scope skill installs from the dev shell's reconcile startup hook.
+/.claude/skills/
