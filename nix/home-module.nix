@@ -171,6 +171,11 @@ in
       (lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
         launchd.agents.jellyfin-settings = {
           enable = true;
+          # Runs jellyfin-settings directly, not through `/bin/sh -c
+          # "wait4path …"`, so Login Items & Extensions lists it as
+          # "jellyfin-settings" rather than "sh". A run that starts before
+          # the store is mounted fails, and StartInterval tries again.
+          waitForNixStore = false;
           config = {
             ProgramArguments = command;
             RunAtLoad = true;
