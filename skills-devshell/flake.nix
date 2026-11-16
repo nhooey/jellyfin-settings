@@ -18,7 +18,7 @@
     # Running headless in a checkout, a tidy scratchpad, and the
     # cross-repository plan's graph.
     coding-agent-skills = {
-      url = "github:nhooey/coding-agent-skills/overnight-skills";
+      url = "github:nhooey/coding-agent-skills";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         agent-skill-flake.follows = "agent-skill-flake";
@@ -27,7 +27,7 @@
 
     # Markdown hygiene, for the README, docs/ and the skills this repo ships.
     document-skills = {
-      url = "github:nhooey/document-skills/overnight-skills";
+      url = "github:nhooey/document-skills";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         agent-skill-flake.follows = "agent-skill-flake";
@@ -36,7 +36,7 @@
 
     # Git and GitHub hygiene, policy and workflow; picked below.
     git-skills = {
-      url = "github:nhooey/git-skills/overnight-skills";
+      url = "github:nhooey/git-skills";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         agent-skill-flake.follows = "agent-skill-flake";
@@ -45,7 +45,7 @@
 
     # Only nix-flakes, which this repo's flake.nix follows.
     nix-skills = {
-      url = "github:nhooey/nix-skills/overnight-skills";
+      url = "github:nhooey/nix-skills";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         agent-skill-flake.follows = "agent-skill-flake";
@@ -54,7 +54,7 @@
 
     # Python style, for the package in src/ and its tests.
     python-skills = {
-      url = "github:nhooey/python-skills/overnight-skills";
+      url = "github:nhooey/python-skills";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         agent-skill-flake.follows = "agent-skill-flake";
@@ -63,7 +63,7 @@
 
     # Safe shell commands: named deletes, PIDs, no machine-wide changes.
     shell-skills = {
-      url = "github:nhooey/shell-skills/overnight-skills";
+      url = "github:nhooey/shell-skills";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         agent-skill-flake.follows = "agent-skill-flake";
@@ -72,7 +72,7 @@
 
     # Prose hygiene, for the README, docs/ and commit messages.
     writing-skills = {
-      url = "github:nhooey/writing-skills/overnight-skills";
+      url = "github:nhooey/writing-skills";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         agent-skill-flake.follows = "agent-skill-flake";
