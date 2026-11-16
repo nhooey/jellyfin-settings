@@ -52,15 +52,27 @@ def test_new_library_and_path_then_one_scan():
     }
     p = plan(STATE, settings, expand)
     assert p.drift == ("libraries.Movies: lacks path /home/u/More", "libraries.Music: missing in Jellyfin")
-    assert [r.path.split("?")[0] for r in p.requests] == [
-        "/Library/VirtualFolders/Paths",
-        "/Library/VirtualFolders",
-        "/Library/Refresh",
+    assert [(r.method, r.path, r.body) for r in p.requests] == [
+        (
+            "POST",
+            "/Library/VirtualFolders/Paths?refreshLibrary=false",
+            {"Name": "Movies", "PathInfo": {"Path": "/home/u/More"}},
+        ),
+        (
+            "POST",
+            "/Library/VirtualFolders?name=Music&collectionType=music&refreshLibrary=false",
+            {"LibraryOptions": {"PathInfos": [{"Path": "/home/u/Music"}]}},
+        ),
+        ("POST", "/Library/Refresh", None),
     ]
-    assert "collectionType=music" in p.requests[1].path
 
 
 def test_plan_leaves_its_inputs_unchanged():
-    state, settings = copy.deepcopy(STATE), {"encoding": {"H264Crf": 1}, "users": {"u": {"X": 2}}}
-    plan(state, settings, expand)
-    assert state == STATE
+    settings = {
+        "encoding": {"H264Crf": 1},
+        "users": {"u": {"X": 2}},
+        "libraries": {"Movies": {"type": "movies", "paths": ["~/More"]}},
+    }
+    state, wanted = copy.deepcopy(STATE), copy.deepcopy(settings)
+    plan(state, wanted, expand)
+    assert (state, wanted) == (STATE, settings)
