@@ -40,6 +40,14 @@ def test_maps_merge_by_key_and_lists_replace():
         ({"libraries": {"M": {"type": "movies"}}}, "libraries.M: needs exactly the keys paths, type"),
         ({"libraries": {"M": {"type": "movies", "paths": [], "x": 1}}}, "libraries.M: needs exactly"),
         ({"libraries": []}, "libraries must be a map"),
+        ({"libraries": None}, "libraries must be a map, not null"),
+        ({"users": None}, "users must be a map, not null"),
+        ({"encoding": []}, "encoding must be a map, not a list"),
+        ({"url": 5}, "url must be a string, not int"),
+        ({"users": {"u": "Always"}}, "users.u must be a map, not a string"),
+        ({"libraries": {"M": {"type": "movies", "paths": "~/M"}}}, "libraries.M: type must be a string"),
+        ({"libraries": {"M": {"type": None, "paths": []}}}, "libraries.M: type must be a string"),
+        ({"libraries": {"M": {"type": "movies", "paths": [1]}}}, "paths a list of strings"),
     ],
 )
 def test_settings_outside_the_defaults_shape_are_refused(settings, message):

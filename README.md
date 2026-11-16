@@ -89,7 +89,7 @@ switch, so a 1Password approval never holds a switch up. Its log is
 
 Every setting's default is in `src/jellyfin_settings/defaults.json`, which ships in the package, and
 SETTINGS names only what it changes: maps merge key by key, other values replace, and a key the defaults
-don't have makes `apply` and `diff` exit 2. An empty `{}` runs on the defaults.
+don't have, or a value of another kind than its default, makes `apply` and `diff` exit 2. An empty `{}` runs on the defaults.
 
 ## How it's built
 
