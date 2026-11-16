@@ -89,4 +89,5 @@ switch, so a 1Password approval never holds a switch up. Its log is
 
 `plan.py` is pure: it maps Jellyfin's state and the declared settings to the drift and the requests that
 remove it, with no I/O. `jellyfin.py` reads the state and sends requests with httpx, and `cli.py` is
-the typer command. `nix flake check` runs the unit tests (pytest, with respx mocking Jellyfin) and ruff.
+the typer command. `nix flake check` runs the unit tests (pytest, with respx mocking Jellyfin),
+evaluates the Home Manager module on Darwin and Linux, and runs ruff.

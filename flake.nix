@@ -63,6 +63,8 @@
 
           checks.package = self'.packages.default;
 
+          checks.home-module = pkgs.callPackage ./nix/tests/home-module.nix { inherit self; };
+
           checks.ruff = pkgs.runCommand "jellyfin-settings-ruff" { nativeBuildInputs = [ pkgs.ruff ]; } ''
             cd ${./.}
             ruff check --no-cache src tests
