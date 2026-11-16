@@ -5,14 +5,14 @@ import subprocess
 REASON = "jellyfin-settings: apply the declared Jellyfin settings"
 
 
-def read_key(secretspec: str, manifest: str) -> str | None:
+def read_key(secretspec: str, manifest: str, timeout: float = 120) -> str | None:
     """The key from `secretspec get JELLYFIN_API_KEY`, or None if it can't be read."""
     try:
         out = subprocess.run(
             [secretspec, "--file", manifest, "get", "JELLYFIN_API_KEY", "--reason", REASON],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=timeout,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
