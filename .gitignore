@@ -6,5 +6,8 @@ result
 result-*
 .direnv/
 
-# Project-scope skill installs from the dev shell's reconcile startup hook.
+# Project-scope skill installs from the dev shell's reconcile startup hook;
+# the skills' preferences files beside them are the project's own.
+/.agents/skills/*
+!/.agents/skills/*.preferences.md
 /.claude/skills/
