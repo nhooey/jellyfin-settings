@@ -33,7 +33,9 @@
       ];
 
       agent-skill-flake.devshellSkills = {
-        name = "jellyfin-settings";
+        # Not `jellyfin-settings`: the dev shell puts a launcher by its name
+        # on PATH, which would shadow the command of that name.
+        name = "jellyfin-settings-dev";
         motd = ''
           {bold}{14}🎬 Entering the jellyfin-settings dev shell{reset}
           Run {bold}menu{reset} to list available commands.
@@ -67,8 +69,7 @@
 
           checks.ruff = pkgs.runCommand "jellyfin-settings-ruff" { nativeBuildInputs = [ pkgs.ruff ]; } ''
             cd ${./.}
-            ruff check --no-cache src tests
-            ruff format --no-cache --check src tests
+            bash ${./scripts/lint.sh}
             touch $out
           '';
 
@@ -91,16 +92,22 @@
             ];
             commands = [
               {
-                category = "test";
-                name = "tests";
-                help = "run the unit tests against the source tree";
-                command = ''cd "$PRJ_ROOT" && python -m pytest "$@"'';
+                category = "run";
+                name = "jellyfin-settings";
+                help = "the command, run from the source tree (apply, diff, config show)";
+                command = ''python -m jellyfin_settings "$@"'';
               }
               {
                 category = "test";
                 name = "lint";
-                help = "ruff check and format check";
-                command = ''cd "$PRJ_ROOT" && ruff check src tests && ruff format --check src tests'';
+                help = "ruff's lint and format checks";
+                command = ''cd "$PRJ_ROOT" && ${pkgs.bash}/bin/bash scripts/lint.sh'';
+              }
+              {
+                category = "test";
+                name = "tests";
+                help = "run the unit tests against the source tree";
+                command = ''cd "$PRJ_ROOT" && python -m pytest "$@"'';
               }
             ];
           };

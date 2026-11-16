@@ -1,6 +1,8 @@
 """The command against a mocked Jellyfin and a stub secretspec."""
 
 import json
+import subprocess
+import sys
 
 import httpx
 import pytest
@@ -193,3 +195,11 @@ def test_config_show_prints_the_settings_merged_over_the_defaults(files):
     r = run("config", "show", settings)
     assert r.exit_code == 0, r.output
     assert json.loads(r.output) == {**config.defaults(), "url": URL, "encoding": {"H264Crf": 20}}
+
+
+def test_module_runs_as_the_command():
+    result = subprocess.run(
+        [sys.executable, "-m", "jellyfin_settings", "--help"], capture_output=True, text=True, check=True
+    )
+    assert "Usage: jellyfin-settings" in result.stdout
+    assert all(command in result.stdout for command in ("apply", "diff", "config"))
