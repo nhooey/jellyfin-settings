@@ -7,6 +7,7 @@ import pytest
 import respx
 from typer.testing import CliRunner
 
+from jellyfin_settings import config
 from jellyfin_settings.cli import app
 
 URL = "http://jellyfin.test"
@@ -156,3 +157,39 @@ def test_diff_without_the_key_exits_2(files, script):
         r = run("diff", settings, "--secretspec", script("failing-secretspec", "exit 1"))
     assert r.exit_code == 2
     assert "couldn't read JELLYFIN_API_KEY" in r.output
+
+
+def test_empty_settings_reach_jellyfin_at_the_default_url(files):
+    settings, stub, _ = files
+    settings.write_text("{}")
+    with respx.mock(assert_all_called=False) as mock:
+        public = mock.get("http://localhost:8096/System/Info/Public").respond(503)
+        r = run("diff", settings, "--secretspec", stub)
+    assert r.exit_code == 2
+    assert public.called
+    assert "doesn't answer at http://localhost:8096" in r.output
+
+
+@pytest.mark.parametrize("command", ["apply", "diff"])
+def test_an_unknown_key_exits_2_and_contacts_nothing(files, command):
+    settings, stub, _ = files
+    settings.write_text(json.dumps({"url": URL, "encodng": {"H264Crf": 20}}))
+    with respx.mock(assert_all_called=False) as mock:
+        route = mock.route()
+        r = run(command, settings, "--secretspec", stub)
+    assert r.exit_code == 2
+    assert "bad settings: unknown key 'encodng'" in r.output
+    assert not route.called
+
+
+def test_config_show_defaults_prints_the_shipped_file():
+    r = run("config", "show", "--defaults")
+    assert r.exit_code == 0, r.output
+    assert r.output == config.defaults_text()
+
+
+def test_config_show_prints_the_settings_merged_over_the_defaults(files):
+    settings, _, _ = files
+    r = run("config", "show", settings)
+    assert r.exit_code == 0, r.output
+    assert json.loads(r.output) == {**config.defaults(), "url": URL, "encoding": {"H264Crf": 20}}

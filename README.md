@@ -70,10 +70,12 @@ switch, so a 1Password approval never holds a switch up. Its log is
 
 ## The command
 
-| Command                            | Does                                                                                         |
-| ---------------------------------- | -------------------------------------------------------------------------------------------- |
-| `jellyfin-settings apply SETTINGS` | sends what differs; exits 0 when Jellyfin or the key isn't there, to retry                   |
-| `jellyfin-settings diff SETTINGS`  | prints what Jellyfin has that differs from SETTINGS; exits 1 on drift, 2 when it can't check |
+| Command                                    | Does                                                                                         |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `jellyfin-settings apply SETTINGS`         | sends what differs; exits 0 when Jellyfin or the key isn't there, to retry                   |
+| `jellyfin-settings diff SETTINGS`          | prints what Jellyfin has that differs from SETTINGS; exits 1 on drift, 2 when it can't check |
+| `jellyfin-settings config show SETTINGS`   | prints SETTINGS merged over the shipped defaults                                             |
+| `jellyfin-settings config show --defaults` | prints the shipped defaults file                                                             |
 
 | Option                 | Commands        | Does                                                                                       |
 | ---------------------- | --------------- | ------------------------------------------------------------------------------------------ |
@@ -84,6 +86,10 @@ switch, so a 1Password approval never holds a switch up. Its log is
 
 `SETTINGS` is the JSON file the module writes, `~/.config/jellyfin-settings/settings.json`. So
 `jellyfin-settings diff ~/.config/jellyfin-settings/settings.json` shows what the dashboard has changed.
+
+Every setting's default is in `src/jellyfin_settings/defaults.json`, which ships in the package, and
+SETTINGS names only what it changes: maps merge key by key, other values replace, and a key the defaults
+don't have makes `apply` and `diff` exit 2. An empty `{}` runs on the defaults.
 
 ## How it's built
 

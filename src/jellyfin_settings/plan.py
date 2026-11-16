@@ -103,9 +103,7 @@ def libraries_plan(folders: list[Mapping], wanted: Mapping, expand: Callable[[st
 def plan(state: Mapping, settings: Mapping, expand: Callable[[str], str]) -> Plan:
     """Everything to change, from Jellyfin's state and the declared settings."""
     return join(
-        config_plan(
-            "encoding", state["encoding"], settings.get("encoding", {}), "/System/Configuration/encoding"
-        ),
-        users_plan(state["users"], settings.get("users", {})),
-        libraries_plan(state["folders"], settings.get("libraries", {}), expand),
+        config_plan("encoding", state["encoding"], settings["encoding"], "/System/Configuration/encoding"),
+        users_plan(state["users"], settings["users"]),
+        libraries_plan(state["folders"], settings["libraries"], expand),
     )
