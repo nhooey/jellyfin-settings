@@ -1,4 +1,4 @@
-"""The `jellyfin-settings` command: apply, plan and diff declared settings.
+"""The `jellyfin-settings` command: apply and diff declared settings.
 
 SETTINGS is a JSON file holding:
 
