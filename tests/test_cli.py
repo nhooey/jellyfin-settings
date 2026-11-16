@@ -1,7 +1,6 @@
 """The command against a mocked Jellyfin and a stub secretspec."""
 
 import json
-import stat
 
 import httpx
 import pytest
@@ -19,20 +18,21 @@ STATE = {
 
 
 @pytest.fixture
-def files(tmp_path):
+def files(script, tmp_path):
     settings = tmp_path / "settings.json"
     settings.write_text(json.dumps({"url": URL, "encoding": {"H264Crf": 20}}))
-    stub = tmp_path / "secretspec"
-    stub.write_text("#!/bin/sh\necho test-key\n")
-    stub.chmod(stub.stat().st_mode | stat.S_IXUSR)
-    return settings, str(stub), tmp_path / "stamp"
+    return settings, script("secretspec", "echo test-key"), tmp_path / "stamp"
 
 
-def mock_jellyfin(mock):
+def mock_jellyfin(mock, encoding_status=204):
+    """Routes for Jellyfin's state; returns the encoding and user configuration POST routes."""
     mock.get(f"{URL}/System/Info/Public").respond(200, json={})
     for path, body in STATE.items():
         mock.get(f"{URL}{path}").respond(200, json=body)
-    return mock.post(f"{URL}/System/Configuration/encoding").respond(204)
+    return (
+        mock.post(f"{URL}/System/Configuration/encoding").respond(encoding_status),
+        mock.post(f"{URL}/Users/42/Configuration").respond(204),
+    )
 
 
 def run(*args):
@@ -42,7 +42,7 @@ def run(*args):
 def test_apply_posts_with_the_key_and_writes_the_stamp(files):
     settings, stub, stamp = files
     with respx.mock as mock:
-        post = mock_jellyfin(mock)
+        post, _ = mock_jellyfin(mock)
         r = run("apply", settings, "--if-changed", stamp, "--secretspec", stub)
     assert r.exit_code == 0, r.output
     assert post.calls.last.request.headers["Authorization"] == 'MediaBrowser Token="test-key"'
@@ -54,7 +54,9 @@ def test_apply_with_matching_stamp_contacts_nothing(files):
     settings, stub, stamp = files
     with respx.mock as mock:
         mock_jellyfin(mock)
-        run("apply", settings, "--if-changed", stamp, "--secretspec", stub)
+        first = run("apply", settings, "--if-changed", stamp, "--secretspec", stub)
+    assert first.exit_code == 0, first.output
+    assert stamp.exists()
     with respx.mock(assert_all_called=False) as mock:
         route = mock.route()
         r = run("apply", settings, "--if-changed", stamp, "--secretspec", stub)
@@ -71,11 +73,86 @@ def test_apply_without_jellyfin_exits_0_and_writes_no_stamp(files):
     assert not stamp.exists()
 
 
+def test_apply_without_the_key_exits_0_sends_nothing_and_writes_no_stamp(files, script):
+    settings, _, stamp = files
+    failing = script("failing-secretspec", "exit 1")
+    with respx.mock(assert_all_called=False) as mock:
+        post, _ = mock_jellyfin(mock)
+        r = run("apply", settings, "--if-changed", stamp, "--secretspec", failing)
+    assert r.exit_code == 0
+    assert "couldn't read JELLYFIN_API_KEY" in r.output
+    assert not post.called
+    assert not stamp.exists()
+
+
+def test_apply_dry_run_prints_requests_sends_nothing_and_writes_no_stamp(files):
+    settings, stub, stamp = files
+    with respx.mock(assert_all_called=False) as mock:
+        post, _ = mock_jellyfin(mock)
+        r = run("apply", settings, "--dry-run", "--if-changed", stamp, "--secretspec", stub)
+    assert r.exit_code == 0, r.output
+    assert "would POST /System/Configuration/encoding" in r.output
+    assert not post.called
+    assert not stamp.exists()
+
+
+def test_apply_stops_at_the_first_refused_request_and_writes_no_stamp(files):
+    settings, stub, stamp = files
+    settings.write_text(
+        json.dumps({"url": URL, "encoding": {"H264Crf": 20}, "users": {"u": {"SubtitleMode": "Always"}}})
+    )
+    with respx.mock(assert_all_called=False) as mock:
+        encoding, user = mock_jellyfin(mock, encoding_status=500)
+        r = run("apply", settings, "--if-changed", stamp, "--secretspec", stub)
+    assert r.exit_code == 0
+    assert "Jellyfin refused a request" in r.output
+    assert (encoding.called, user.called) == (True, False)
+    assert not stamp.exists()
+
+
 def test_diff_reports_drift_with_exit_1_and_sends_nothing(files):
     settings, stub, _ = files
-    with respx.mock as mock:
-        post = mock_jellyfin(mock)
+    with respx.mock(assert_all_called=False) as mock:
+        post, _ = mock_jellyfin(mock)
         r = run("diff", settings, "--secretspec", stub)
     assert r.exit_code == 1
     assert "encoding.H264Crf: Jellyfin has 23, declared 20" in r.output
     assert not post.called
+
+
+def test_diff_without_drift_exits_0(files):
+    settings, stub, _ = files
+    settings.write_text(json.dumps({"url": URL, "encoding": {"H264Crf": 23}}))
+    with respx.mock(assert_all_called=False) as mock:
+        mock_jellyfin(mock)
+        r = run("diff", settings, "--secretspec", stub)
+    assert r.exit_code == 0, r.output
+    assert "Jellyfin matches the declared settings" in r.output
+
+
+def test_diff_reports_a_skipped_user_as_drift(files):
+    settings, stub, _ = files
+    settings.write_text(json.dumps({"url": URL, "users": {"nobody": {"X": 1}}}))
+    with respx.mock(assert_all_called=False) as mock:
+        mock_jellyfin(mock)
+        r = run("diff", settings, "--secretspec", stub)
+    assert r.exit_code == 1
+    assert "users.nobody: no such Jellyfin user; skipped" in r.output
+
+
+def test_diff_without_jellyfin_exits_2(files):
+    settings, stub, _ = files
+    with respx.mock as mock:
+        mock.get(f"{URL}/System/Info/Public").mock(side_effect=httpx.ConnectError("down"))
+        r = run("diff", settings, "--secretspec", stub)
+    assert r.exit_code == 2
+    assert "doesn't answer" in r.output
+
+
+def test_diff_without_the_key_exits_2(files, script):
+    settings, _, _ = files
+    with respx.mock(assert_all_called=False) as mock:
+        mock_jellyfin(mock)
+        r = run("diff", settings, "--secretspec", script("failing-secretspec", "exit 1"))
+    assert r.exit_code == 2
+    assert "couldn't read JELLYFIN_API_KEY" in r.output
