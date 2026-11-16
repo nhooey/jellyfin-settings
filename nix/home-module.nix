@@ -23,14 +23,17 @@ let
   inherit (lib) mkEnableOption mkOption types;
   package = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
-  settingsFile = (pkgs.formats.json { }).generate "jellyfin-settings.json" {
-    inherit (cfg)
-      url
-      encoding
-      users
-      libraries
-      ;
-  };
+  # Only what's declared: the command merges it over its shipped defaults.
+  settingsFile = (pkgs.formats.json { }).generate "jellyfin-settings.json" (
+    lib.filterAttrs (_: v: v != null) {
+      inherit (cfg)
+        url
+        encoding
+        users
+        libraries
+        ;
+    }
+  );
   manifest = "${config.xdg.configHome}/secretspec/jellyfin.toml";
   command = [
     (lib.getExe package)
@@ -48,8 +51,10 @@ in
     enable = mkEnableOption "applying declared Jellyfin settings through its REST API";
 
     url = mkOption {
-      type = types.str;
-      default = "http://localhost:8096";
+      type = types.nullOr types.str;
+      default = null;
+      defaultText = lib.literalMD "unset, so the command's shipped default, `http://localhost:8096`, applies";
+      example = "http://media.local:8096";
       description = "Jellyfin's base URL.";
     };
 

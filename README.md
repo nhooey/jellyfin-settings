@@ -41,7 +41,7 @@ The module's options, under `services.jellyfin-settings`:
 | Option             | Default                                                | Sets                                                           |
 | ------------------ | ------------------------------------------------------ | -------------------------------------------------------------- |
 | `enable`           | `false`                                                | whether the job runs                                           |
-| `url`              | `http://localhost:8096`                                | Jellyfin's base URL                                            |
+| `url`              | unset: the command's default, `http://localhost:8096`  | Jellyfin's base URL                                            |
 | `encoding`         | `{ }`                                                  | keys of `/System/Configuration/encoding`                       |
 | `users.<name>`     | `{ }`                                                  | keys of that user's configuration                              |
 | `libraries.<name>` | `{ }`                                                  | `type` (Jellyfin's collection type) and `paths` (`~/` is home) |

@@ -100,6 +100,13 @@ let
     "/home/u/.config/secretspec/jellyfin.toml"
   ];
 
+  # The settings file written when only the key is declared.
+  sparseSettingsFile =
+    (evaluate true {
+      enable = true;
+      apiKey.item = "item-id";
+    }).xdg.configFile."jellyfin-settings/settings.json".source;
+
   failures = lib.runTests {
     testDisabledDeclaresNothing = {
       expr =
@@ -195,5 +202,7 @@ runCommand "jellyfin-settings-home-module" { nativeBuildInputs = [ jq ]; } ''
   ''}
   # settings.json holds the declared settings and nothing else.
   diff <(jq -S . ${expectedSettings}) <(jq -S . ${settingsFile})
+  # An unset url is left out, so the command's shipped default applies.
+  diff <(echo '{"encoding":{},"users":{},"libraries":{}}' | jq -S .) <(jq -S . ${sparseSettingsFile})
   touch $out
 ''
