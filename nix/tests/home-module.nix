@@ -6,6 +6,7 @@
   lib,
   pkgs,
   jq,
+  python3,
   runCommand,
 }:
 let
@@ -100,6 +101,39 @@ let
     "/home/u/.config/secretspec/jellyfin.toml"
   ];
 
+  # The SecretSpec manifest, and the document it must parse to, for the
+  # declared key and for a title holding TOML's quote and escape characters.
+  manifestFile = config: config.xdg.configFile."secretspec/jellyfin.toml".source;
+  quotedTitle = ''My "Jellyfin" \ key'';
+  quotedManifestFile = manifestFile (
+    evaluate true {
+      enable = true;
+      apiKey = {
+        item = "item-id";
+        title = quotedTitle;
+      };
+    }
+  );
+  expectedManifest =
+    description:
+    builtins.toFile "expected-manifest.json" (
+      builtins.toJSON {
+        project = {
+          name = "jellyfin";
+          revision = "1.0";
+        };
+        profiles.default.JELLYFIN_API_KEY = {
+          inherit description;
+          required = true;
+          providers = [ "onepassword-uncached" ];
+          ref = {
+            item = "item-id";
+            field = "credential";
+          };
+        };
+      }
+    );
+
   # The settings file written when only the key is declared.
   sparseSettingsFile =
     (evaluate true {
@@ -123,18 +157,6 @@ let
         configFile = { };
         agents = { };
       };
-    };
-
-    testManifestReadsTheItemsFieldThroughTheProvider = {
-      expr = darwin.xdg.configFile."secretspec/jellyfin.toml".text;
-      expected = ''
-        [project]
-        name = "jellyfin"
-        revision = "1.0"
-
-        [profiles.default]
-        JELLYFIN_API_KEY = { description = "Jellyfin API key (1Password: Jellyfin)", required = true, providers = ["onepassword-uncached"], ref = { item = "item-id", field = "credential" } }
-      '';
     };
 
     testDarwinRunsALaunchdAgentOnly = {
@@ -193,16 +215,32 @@ let
     }
   );
 in
-runCommand "jellyfin-settings-home-module" { nativeBuildInputs = [ jq ]; } ''
-  ${lib.optionalString (failures != [ ]) ''
-    cat <<'EOF'
-    ${builtins.unsafeDiscardStringContext (builtins.toJSON failures)}
-    EOF
-    exit 1
-  ''}
-  # settings.json holds the declared settings and nothing else.
-  diff <(jq -S . ${expectedSettings}) <(jq -S . ${settingsFile})
-  # An unset url is left out, so the command's shipped default applies.
-  diff <(echo '{"encoding":{},"users":{},"libraries":{}}' | jq -S .) <(jq -S . ${sparseSettingsFile})
-  touch $out
-''
+runCommand "jellyfin-settings-home-module"
+  {
+    nativeBuildInputs = [
+      jq
+      python3
+    ];
+  }
+  ''
+    ${lib.optionalString (failures != [ ]) ''
+      cat <<'EOF'
+      ${builtins.unsafeDiscardStringContext (builtins.toJSON failures)}
+      EOF
+      exit 1
+    ''}
+    # settings.json holds the declared settings and nothing else.
+    diff <(jq -S . ${expectedSettings}) <(jq -S . ${settingsFile})
+    # An unset url is left out, so the command's shipped default applies.
+    diff <(echo '{"encoding":{},"users":{},"libraries":{}}' | jq -S .) <(jq -S . ${sparseSettingsFile})
+    # The manifest is TOML that reads the item's field through the provider,
+    # whatever characters the title holds.
+    toml_to_json() {
+      python3 -c 'import json, sys, tomllib; print(json.dumps(tomllib.load(open(sys.argv[1], "rb"))))' "$1"
+    }
+    diff <(jq -S . ${expectedManifest "Jellyfin API key (1Password: Jellyfin)"}) \
+      <(toml_to_json ${manifestFile darwin} | jq -S .)
+    diff <(jq -S . ${expectedManifest "Jellyfin API key (1Password: ${quotedTitle})"}) \
+      <(toml_to_json ${quotedManifestFile} | jq -S .)
+    touch $out
+  ''
