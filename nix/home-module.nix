@@ -23,6 +23,23 @@ let
   inherit (lib) mkEnableOption mkOption types;
   package = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
+  # SecretSpec's manifest for the API key, serialised by a TOML writer so
+  # quotes and backslashes in the declared strings are escaped.
+  manifestFile = (pkgs.formats.toml { }).generate "jellyfin.toml" {
+    project = {
+      name = "jellyfin";
+      revision = "1.0";
+    };
+    profiles.default.JELLYFIN_API_KEY = {
+      description =
+        "Jellyfin API key"
+        + lib.optionalString (cfg.apiKey.title != "") " (1Password: ${cfg.apiKey.title})";
+      required = true;
+      providers = [ cfg.apiKey.provider ];
+      ref = { inherit (cfg.apiKey) item field; };
+    };
+  };
+
   # Only what's declared: the command merges it over its shipped defaults.
   settingsFile = (pkgs.formats.json { }).generate "jellyfin-settings.json" (
     lib.filterAttrs (_: v: v != null) {
@@ -161,16 +178,7 @@ in
 
         xdg.configFile."jellyfin-settings/settings.json".source = settingsFile;
 
-        xdg.configFile."secretspec/jellyfin.toml".text = ''
-          [project]
-          name = "jellyfin"
-          revision = "1.0"
-
-          [profiles.default]
-          JELLYFIN_API_KEY = { description = "Jellyfin API key${
-            lib.optionalString (cfg.apiKey.title != "") " (1Password: ${cfg.apiKey.title})"
-          }", required = true, providers = ["${cfg.apiKey.provider}"], ref = { item = "${cfg.apiKey.item}", field = "${cfg.apiKey.field}" } }
-        '';
+        xdg.configFile."secretspec/jellyfin.toml".source = manifestFile;
       }
 
       (lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {

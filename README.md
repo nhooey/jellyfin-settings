@@ -2,17 +2,15 @@
 
 Declare Jellyfin's settings in Nix and apply them through Jellyfin's REST API.
 
-Jellyfin keeps its settings in XML files and a database that its dashboard rewrites, so they can't be
-declared as files. This flake's Home Manager module declares them as options instead, and a background
-job sends them to Jellyfin's API:
+Jellyfin keeps its settings in XML files and a database that its dashboard rewrites, so they can't be declared as files.
+This flake's Home Manager module declares them as options instead, and a background job sends them to Jellyfin's API:
 
-- **Encoding settings:** any key of `/System/Configuration/encoding`, such as hardware acceleration and
-  CRF.
+- **Encoding settings:** any key of `/System/Configuration/encoding`, such as hardware acceleration and CRF.
 - **Per-user settings:** any key of a user's configuration, such as subtitle language and mode.
 - **Libraries:** added with their folders and scanned when missing; a folder missing from one is added.
 
-Only the keys you list are changed, so anything else set in the dashboard stays. Nothing is ever
-removed.
+Only the keys you list are changed, so anything else set in the dashboard stays.
+Nothing is ever removed.
 
 ## Use
 
@@ -31,10 +29,9 @@ removed.
 }
 ```
 
-The API key is read through [SecretSpec](https://secretspec.dev) from 1Password, by item ID, through the
-provider alias `apiKey.provider` names (`onepassword-uncached` by default, from the user-global
-`~/.config/secretspec/config.toml`). The module writes the manifest to
-`~/.config/secretspec/jellyfin.toml`. The key is never written anywhere else or printed.
+The API key is read through [SecretSpec](https://secretspec.dev) from 1Password, by item ID, through the provider alias `apiKey.provider` names (`onepassword-uncached` by default, from the user-global `~/.config/secretspec/config.toml`).
+The module writes the manifest to `~/.config/secretspec/jellyfin.toml`.
+The key is never written anywhere else or printed.
 
 The module's options, under `services.jellyfin-settings`:
 
@@ -54,19 +51,14 @@ The module's options, under `services.jellyfin-settings`:
 
 ## When the settings are applied
 
-A launchd agent on macOS, or a systemd user timer on Linux, runs
-`jellyfin-settings apply --if-changed STAMP`, where STAMP is
-`$XDG_STATE_HOME/jellyfin-settings/applied.sha256`:
+A launchd agent on macOS, or a systemd user timer on Linux, runs `jellyfin-settings apply --if-changed STAMP`, where STAMP is `$XDG_STATE_HOME/jellyfin-settings/applied.sha256`:
 
-- **When it loads:** right after a switch that changes the settings, since its arguments name the
-  settings file.
-- **Every 15 minutes** (`interval`): to apply settings a run couldn't, because Jellyfin wasn't running or
-  the key couldn't be read.
+- **When it loads:** right after a switch that changes the settings, since its arguments name the settings file.
+- **Every 15 minutes** (`interval`): to apply settings a run couldn't, because Jellyfin wasn't running or the key couldn't be read.
 
-A run returns at once when the settings' hash matches the one the last successful run wrote to STAMP,
-so it reads the key, and 1Password asks, only when there's something to apply. It runs outside the
-switch, so a 1Password approval never holds a switch up. Its log is
-`~/Library/Logs/jellyfin-settings.log` on macOS.
+A run returns at once when the settings' hash matches the one the last successful run wrote to STAMP, so it reads the key, and 1Password asks, only when there's something to apply.
+It runs outside the switch, so a 1Password approval never holds a switch up.
+Its log is `~/Library/Logs/jellyfin-settings.log` on macOS.
 
 ## The command
 
@@ -84,16 +76,14 @@ switch, so a 1Password approval never holds a switch up. Its log is
 | `--secretspec COMMAND` | `apply`, `diff` | the secretspec command to read the key with; `secretspec` by default                       |
 | `--manifest PATH`      | `apply`, `diff` | the manifest declaring `JELLYFIN_API_KEY`; `~/.config/secretspec/jellyfin.toml` by default |
 
-`SETTINGS` is the JSON file the module writes, `~/.config/jellyfin-settings/settings.json`. So
-`jellyfin-settings diff ~/.config/jellyfin-settings/settings.json` shows what the dashboard has changed.
+`SETTINGS` is the JSON file the module writes, `~/.config/jellyfin-settings/settings.json`.
+So `jellyfin-settings diff ~/.config/jellyfin-settings/settings.json` shows what the dashboard has changed.
 
-Every setting's default is in `src/jellyfin_settings/defaults.json`, which ships in the package, and
-SETTINGS names only what it changes: maps merge key by key, other values replace, and a key the defaults
-don't have makes `apply` and `diff` exit 2. An empty `{}` runs on the defaults.
+Every setting's default is in `src/jellyfin_settings/defaults.json`, which ships in the package, and SETTINGS names only what it changes: maps merge key by key, other values replace, and a key the defaults don't have, or a value of another kind than its default, makes `apply` and `diff` exit 2.
+An empty `{}` runs on the defaults.
 
 ## How it's built
 
-`plan.py` is pure: it maps Jellyfin's state and the declared settings to the drift and the requests that
-remove it, with no I/O. `jellyfin.py` reads the state and sends requests with httpx, and `cli.py` is
-the typer command. `nix flake check` runs the unit tests (pytest, with respx mocking Jellyfin),
-evaluates the Home Manager module on Darwin and Linux, and runs ruff.
+`plan.py` is pure: it maps Jellyfin's state and the declared settings to the drift and the requests that remove it, with no I/O.
+`jellyfin.py` reads the state and sends requests with httpx, and `cli.py` is the typer command.
+`nix flake check` runs the unit tests (pytest, with respx mocking Jellyfin), evaluates the Home Manager module on Darwin and Linux, and runs ruff.
